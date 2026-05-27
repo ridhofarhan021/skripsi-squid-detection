@@ -4,6 +4,7 @@ from tensorflow.keras.applications import EfficientNetB0
 from tensorflow.keras import layers, models
 import numpy as np
 from PIL import Image
+import os # <-- 1. PASTIKAN MODULE INI DI-IMPORT
 
 # Set Konfigurasi Halaman
 st.set_page_config(page_title="Deteksi Varian Cumi", page_icon="🦑", layout="centered")
@@ -11,21 +12,24 @@ st.set_page_config(page_title="Deteksi Varian Cumi", page_icon="🦑", layout="c
 # ==========================================
 # 1. FUNGSI PEMUATAN MODEL (DENGAN CACHE)
 # ==========================================
-# @st.cache_resource agar model hanya di-load 1 kali saat aplikasi pertama kali dibuka
 @st.cache_resource 
 def load_model():
-    # A. Bangun ulang arsitektur Sang Juara (EfficientNetB0)
+    # A. Bangun ulang arsitektur
     base_model = EfficientNetB0(weights=None, include_top=False, input_shape=(224, 224, 3))
     
     x = base_model.output
     x = layers.GlobalAveragePooling2D()(x)
-    x = layers.Dropout(0.3)(x) # Dropout sesuai hasil tuning pemenang
+    x = layers.Dropout(0.3)(x) 
     outputs = layers.Dense(4, activation='softmax')(x)
     
     model = models.Model(inputs=base_model.input, outputs=outputs)
     
-    # B. Load bobot dari file
-    model.load_weights("Model_Final_Streamlit.weights.h5")
+    # B. Dapatkan path absolut agar Streamlit Cloud tidak bingung (PERUBAHAN UTAMA)
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    model_path = os.path.join(BASE_DIR, "Model_Final_Streamlit.weights.h5")
+    
+    # C. Load bobot dari file
+    model.load_weights(model_path)
     return model
 
 # ==========================================
@@ -64,33 +68,27 @@ else:
 # 4. LOGIKA PREDIKSI
 # ==========================================
 if image_file is not None:
-    # Tampilkan gambar yang diunggah
     image = Image.open(image_file)
     st.image(image, caption="Gambar yang akan diproses", use_column_width=True)
     
-    # Tombol Prediksi
     if st.button("🔍 Analisis Varian Cumi", type="primary"):
         if model_loaded:
             with st.spinner("Model sedang menganalisis tekstur cumi..."):
-                # Preprocessing Gambar
-                img_resized = image.resize((224, 224)) # Ubah ukuran sesuai input model
+                img_resized = image.resize((224, 224)) 
                 img_array = tf.keras.utils.img_to_array(img_resized)
-                img_batch = np.expand_dims(img_array, axis=0) # Tambahkan dimensi batch
+                img_batch = np.expand_dims(img_array, axis=0) 
                 
-                # Prediksi
                 predictions = model.predict(img_batch)
                 predicted_class_idx = np.argmax(predictions[0])
                 confidence = np.max(predictions[0])
                 
                 predicted_label = CLASSES[predicted_class_idx]
                 
-                # Menampilkan Hasil
                 st.success("Analisis Selesai!")
                 st.subheader(f"Prediksi: **{predicted_label}**")
                 st.progress(float(confidence))
                 st.write(f"Tingkat Keyakinan (Confidence): **{confidence * 100:.2f}%**")
                 
-                # Menampilkan detail probabilitas semua kelas (Opsional, bagus untuk dosen)
                 with st.expander("Lihat Detail Probabilitas Semua Kelas"):
                     for i, class_name in enumerate(CLASSES):
                         st.write(f"- {class_name}: {predictions[0][i] * 100:.2f}%")
