@@ -4,6 +4,7 @@ from tensorflow.keras.applications import EfficientNetB0
 from tensorflow.keras import layers, models
 import numpy as np
 from PIL import Image
+import os
 
 # Set Konfigurasi Halaman
 st.set_page_config(page_title="Deteksi Varian Cumi", page_icon="🦑", layout="centered")
