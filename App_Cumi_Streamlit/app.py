@@ -19,13 +19,16 @@ def load_model():
     
     x = base_model.output
     x = layers.GlobalAveragePooling2D()(x)
-    x = layers.Dropout(0.3)(x) # Dropout sesuai hasil tuning pemenang
+    x = layers.Dropout(0.3)(x) 
     outputs = layers.Dense(4, activation='softmax')(x)
     
     model = models.Model(inputs=base_model.input, outputs=outputs)
     
-    # B. Load bobot dari file
-    model.load_weights("Model_Final_Streamlit.weights.h5")
+    # B. Load bobot menggunakan Absolute Path (Anti-Nyasar)
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    MODEL_PATH = os.path.join(BASE_DIR, "Model_Final_Streamlit.weights.h5")
+    
+    model.load_weights(MODEL_PATH)
     return model
 
 # ==========================================
